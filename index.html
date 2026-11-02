@@ -11,7 +11,7 @@
     <style>
         /* Penguncian Garis Tabel Rapi & Bebas Terpotong */
         table, th, td {
-            border: 1px solid #cbd5e1 !important; /* Warna border slate-300 tegas */
+            border: 1px solid #cbd5e1 !important;
             border-collapse: collapse !important;
             box-sizing: border-box !important;
         }
@@ -31,10 +31,6 @@
             background-color: #ffffff !important;
             padding: 30px !important;
         }
-
-        .jpg-export-mode tr {
-            page-break-inside: avoid !important;
-        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen py-6 px-3 text-slate-800">
@@ -51,7 +47,7 @@
             </button>
             <button onclick="exportToJPG()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition flex items-center gap-1 text-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
                 </svg>
                 Simpan JPG
             </button>
@@ -93,30 +89,40 @@
     <script>
         let rowCount = 0;
 
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
             addRow();
             addRow();
             setPrintDate();
-        };
+        });
 
         function setPrintDate() {
             const now = new Date();
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-            document.getElementById('printDate').innerText = 'Dicetak pada: ' + now.toLocaleDateString('id-ID', options);
+            const dateElement = document.getElementById('printDate');
+            if (dateElement) {
+                dateElement.innerText = 'Dicetak pada: ' + now.toLocaleDateString('id-ID', options);
+            }
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
         }
 
         function addRow() {
             rowCount++;
             const tbody = document.getElementById('tableBody');
+            if (!tbody) return;
+
             const tr = document.createElement('tr');
             tr.className = "row-item";
             tr.id = `row-${rowCount}`;
 
             tr.innerHTML = `
-                <td class="p-2.5 text-center font-bold text-slate-700 row-number align-top">
+                <td class="p-2.5 text-center font-bold text-slate-700 row-number align-middle">
                     ${tbody.children.length + 1}
                 </td>
-                <td class="p-2.5 align-top">
+                <td class="p-2.5 align-middle">
                     <div class="flex flex-col items-center gap-2">
                         <div id="preview-container-${rowCount}" class="hidden w-full flex justify-center">
                             <img id="preview-${rowCount}" class="max-h-72 w-full rounded shadow-sm object-contain border border-slate-200" src="" alt="Dokumentasi">
@@ -127,8 +133,8 @@
                         </label>
                     </div>
                 </td>
-                <td class="p-2.5 align-top">
-                    <textarea class="w-full h-32 p-2 border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 outline-none resize-y text-slate-700 text-sm cell-text" placeholder="Isikan keterangan kegiatan..."></textarea>
+                <td class="p-2.5 align-middle">
+                    <textarea id="text-${rowCount}" oninput="autoResizeTextarea(this)" class="w-full min-h-[100px] p-2 border border-slate-200 rounded focus:ring-1 focus:ring-blue-500 outline-none resize-y text-slate-700 text-sm cell-text" placeholder="Isikan keterangan kegiatan..."></textarea>
                 </td>
                 <td class="p-2.5 text-center align-middle no-print">
                     <button onclick="deleteRow(${rowCount})" class="text-red-500 hover:text-red-700 p-1 rounded" title="Hapus">
@@ -168,40 +174,43 @@
                 reader.onload = function(e) {
                     const preview = document.getElementById(`preview-${id}`);
                     const container = document.getElementById(`preview-container-${id}`);
-                    preview.src = e.target.result;
-                    container.classList.remove('hidden');
+                    if (preview && container) {
+                        preview.src = e.target.result;
+                        container.classList.remove('hidden');
+                    }
                 };
                 reader.readAsDataURL(file);
             }
         }
 
+        // --- FUNGSI SIMPAN JPG ---
         function exportToJPG() {
             setPrintDate();
             const element = document.getElementById('reportArea');
 
-            // 1. Sembunyikan elemen aksi (tombol tambah/hapus)
+            // 1. Sembunyikan elemen tombol & kolom aksi
             const noPrintElements = document.querySelectorAll('.no-print');
             noPrintElements.forEach(el => el.style.display = 'none');
 
-            // 2. Ubah textarea menjadi elemen div biasa dengan styling pembatal batas tinggi
+            // 2. Ubah textarea menjadi elemen div biasa
             const textareas = document.querySelectorAll('textarea');
             const createdDivs = [];
             textareas.forEach(ta => {
                 const div = document.createElement('div');
                 div.className = 'text-slate-700 text-sm cell-text w-full p-1';
-                div.style.minHeight = '100px';
+                div.style.minHeight = '80px';
                 div.innerText = ta.value || '-';
                 ta.style.display = 'none';
                 ta.parentNode.appendChild(div);
                 createdDivs.push({ ta, div });
             });
 
-            // 3. Kunci lebar tabel sebelum pengambilan gambar
+            // 3. Kunci lebar dokumen sebelum tangkapan layar
             element.classList.add('jpg-export-mode');
 
-            // 4. Proses pembuatan gambar JPG
+            // 4. Proses render ke file JPG
             html2canvas(element, {
-                scale: 2, // Kualitas HD tajam
+                scale: 2, // Resolusi tinggi tajam
                 useCORS: true,
                 backgroundColor: '#ffffff',
                 logging: false,
@@ -212,7 +221,7 @@
                 link.href = canvas.toDataURL('image/jpeg', 0.95);
                 link.click();
 
-                // 5. Kembalikan struktur aplikasi ke kondisi semula
+                // 5. Kembalikan ke tampilan semula
                 element.classList.remove('jpg-export-mode');
                 noPrintElements.forEach(el => el.style.display = '');
                 createdDivs.forEach(item => {
